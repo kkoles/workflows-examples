@@ -7,7 +7,7 @@ jobs:
     name: Deploy
     runs-on: ubuntu-latest
     container: 
-      image: busybox
+      image: node:14.15.0-alpine3.12
     env: 
       TAG: version-1.0
       DESCIPTION: description text
