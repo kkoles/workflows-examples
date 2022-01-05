@@ -24,9 +24,8 @@ jobs:
       
       - name: echo variables
         run: |
-          cat /etc/os-release  
-          # export TAG="$TAG"
-          # env
+          env
+          echo "****************"
           echo $TAG
           echo $DESCIPTION
           echo $VOLUME
