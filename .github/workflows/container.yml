@@ -25,13 +25,15 @@ jobs:
       - name: echo variables
         run: |
           cat /etc/os-release  
-          echo $TAG
-          echo $DESCIPTION
-          echo $VOLUME
-          echo $REPLICAS
-          echo $EXAMPLE_VARIABLE
-          echo $TEST_VARIABLE
-          echo $ENVIRONMENT
+          export TAG="$TAG"
+          env
+          # echo $TAG
+          # echo $DESCIPTION
+          # echo $VOLUME
+          # echo $REPLICAS
+          # echo $EXAMPLE_VARIABLE
+          # echo $TEST_VARIABLE
+          # echo $ENVIRONMENT
 
 
 
