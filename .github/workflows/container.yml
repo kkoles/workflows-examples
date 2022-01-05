@@ -1,0 +1,41 @@
+name: Container
+on: 
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    container: 
+      image: busybox
+    env: 
+      TAG: version-1.0
+      DESCIPTION: description text
+      VOLUME: 1000
+      REPLICAS: 1
+      EXAMPLE_VARIABLE: "example-${{ env.TAG }}"
+      TEST_VARIABLE: "test-$TAG"
+      ENVIRONMENT: test-$TAG
+    
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: checkout
+        uses: actions/checkout@v2
+      
+      - name: echo variables
+        run: |
+          cat /etc/os-release  
+          echo $TAG
+          echo $DESCIPTION
+          echo $VOLUME
+          echo $REPLICAS
+          echo $EXAMPLE_VARIABLE
+          echo $TEST_VARIABLE
+          echo $ENVIRONMENT
+
+
+
+    
+
+
+
