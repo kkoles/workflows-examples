@@ -13,7 +13,7 @@ jobs:
       DESCIPTION: description text
       VOLUME: 1000
       REPLICAS: 1
-      EXAMPLE_VARIABLE: "example-${{ TAG }}"
+      EXAMPLE_VARIABLE: "example-${TAG}"
       TEST_VARIABLE: "test-$TAG"
       ENVIRONMENT: test-$TAG
     
