@@ -20,14 +20,12 @@ jobs:
         uses: actions/checkout@v2
       
       - name: Set variables
-        env:
-          EXAMPLE_VARIABLE: 'example-${{ env.TAG}}'
-          TEST_VARIABLE: 'test-${{ env.TAG}}'
-          ENVIRONMENT: 'test-${{ env.TAG}}'
+        # env:
+        #   EXAMPLE_VARIABLE: 'example-${{ env.TAG}}'
+          # TEST_VARIABLE: 'test-${{ env.TAG}}'
+          # ENVIRONMENT: 'test-${{ env.TAG}}'
         run: |
-          echo "::set-env name=EXAMPLE_VARIABLE::$EXAMPLE_VARIABLE"
-          echo "::set-env name=TEST_VARIABLE::$TEST_VARIABLE"
-          echo "::set-env name=ENVIRONMENT::$ENVIRONMENT"
+          echo "EXAMPLE_VARIABLE=example-${{ env.TAG}}" >> $GITHUB_ENV
 
       - name: Echo variables
         run: |
@@ -39,8 +37,6 @@ jobs:
           echo $VOLUME
           echo $REPLICAS
           echo $EXAMPLE_VARIABLE
-          echo $TEST_VARIABLE
-          echo $ENVIRONMENT
 
 
 
