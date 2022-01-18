@@ -27,4 +27,4 @@ jobs:
           NEXUS_VERSION=3.37.3-02
       
     - name: Look up images
-        run: docker image ls
+      run: docker image ls
