@@ -10,7 +10,6 @@ terraform {
 }
 
 provider "aws" {
-#  profile = "kkoles_devops"
   region  = "eu-central-1"
 }
 

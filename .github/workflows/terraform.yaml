@@ -4,9 +4,10 @@ name: Terraform Module
 on:
   workflow_call:
     inputs:
-      WORKING_DIRECTORY:
+      TF_ACTIONS_WORKING_DIRECTORY:
         type: string
         required: false
+        default: './'
     secrets:
       AWS_ACCESS_KEY_ID:
         required: true
@@ -20,6 +21,10 @@ jobs:
   check:
     name: Terraform
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ${{ inputs.TF_ACTIONS_WORKING_DIRECTORY }}
 
     steps:
     - name: Checkout Repo
