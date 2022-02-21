@@ -1,0 +1,141 @@
+
+name: Terraform Module
+
+on:
+  workflow_call:
+    inputs:
+      WORKING_DIRECTORY:
+        type: string
+        required: false
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      AWS_ROLE_TO_ASSUME:
+        required: false
+
+
+jobs:
+  check:
+    name: Terraform
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-region: eu-central-1
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#        role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+        role-duration-seconds: 2000
+
+    - name: Setup Node
+      uses: actions/setup-node@v2
+      with:
+        node-version: 14
+
+    - name: Extract Base Branch Name
+      if: github.event_name == 'pull_request'
+      run: |
+        echo "BRANCH=$(echo $GITHUB_BASE_REF)" >> $GITHUB_ENV
+    - name: Extract Branch Name
+      if: github.event_name != 'pull_request'
+      run: | 
+        echo "BRANCH=$(echo $GITHUB_REF | cut -d'/' -f 3)" >> $GITHUB_ENV
+    - name: Setup Env
+      id: environment
+      shell: bash
+      run: |
+        if [[ $BRANCH == 'master' ]]; then
+            echo "STAGE=prod" >> "$GITHUB_ENV"
+        else
+            echo "STAGE=test" >> "$GITHUB_ENV"
+        fi
+    - name: Show Env
+      id: env_output
+      shell: bash
+      run: echo $STAGE
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 1.0.3
+
+    - name: Terraform fmt
+      id: fmt
+      run: terraform fmt -check
+      continue-on-error: true
+
+    - name: Terraform Init
+      id: init
+#      working-directory: ./terraform/env/${{env.STAGE}}
+      run: terraform init
+
+    - name: Terraform Validate
+      id: validate
+#      working-directory: ./terraform/env/${{env.STAGE}}
+      run: terraform validate -no-color
+
+    - name: Terraform Plan
+      id: plan
+#      working-directory: ./terraform/env/${{env.STAGE}}
+      run: terraform plan -no-color
+      continue-on-error: true
+
+    - name: Update Pull Request
+      uses: actions/github-script@v3.1
+      if: github.event_name == 'pull_request'
+      env:
+        PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+      with:
+        script: |
+            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+            #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+            
+            <details><summary>Show Plan</summary>
+            
+            \`\`\`\n
+            ${process.env.PLAN}
+            \`\`\`
+            
+            </details>
+            
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+            
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+    - name: Terraform Plan Status
+      if: steps.plan.outcome == 'failure'
+      run: exit 1
+
+#    - name: Terraform Apply
+#      if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev' && github.event_name == 'push'
+#      working-directory: ./terraform/env/${{env.STAGE}}
+#      run: terraform apply -auto-approve
+
+#    - name: Terraform Apply Result
+#      uses: actions/github-script@v3.1
+#      if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev' && github.event_name == 'push'
+#      env:
+#        PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+#        APPLY: "terraform\n${{ steps.apply.outputs.stdout }}"
+#      with:
+#        script: |
+#            const output = `#### Terraform Format and Style 🖌 \`${{ steps.fmt.outcome }}\`
+#            #### Terraform Initialization ⚙️ \`${{ steps.init.outcome }}\`
+#            #### Terraform Validation 🤖 ${{ steps.validate.outputs.stdout }}
+#            #### Terraform Plan 📖 \`${{ steps.plan.outcome }}\`
+#            #### Terraform Apply ✅ \`${{ steps.apply.outcome }}\`
+#
+#            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`*`;
