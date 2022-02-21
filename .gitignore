@@ -1,2 +1,5 @@
 # Ignore IDE config files
 **/.idea
+#Ignore terraform-generated files
+**/.terraform
+.terraform.lock.hcl
