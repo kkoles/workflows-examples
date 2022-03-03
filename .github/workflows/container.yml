@@ -22,7 +22,7 @@ jobs:
       - name: Set variables
         run: |
           echo "EXAMPLE_VARIABLE=example-${{ env.TAG}}" >> $GITHUB_ENV
-          echo "MY_VARIABLE=${{ secret.MY_VARIABLE }}" >> $GITHUB_ENV
+#          echo "MY_VARIABLE=${{ secret.MY_VARIABLE }}" >> $GITHUB_ENV
 
       - name: Echo variables
         run: |
@@ -34,7 +34,7 @@ jobs:
           echo $VOLUME
           echo $REPLICAS
           echo $EXAMPLE_VARIABLE
-          echo $MY_VARIABLE
+#          echo $MY_VARIABLE
 
 
 
