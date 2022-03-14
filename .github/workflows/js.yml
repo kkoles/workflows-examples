@@ -1,0 +1,111 @@
+name: JavaScript CI
+
+on:
+  workflow_call:
+    inputs:
+      JS_ACTIONS_WORKING_DIRECTORY:
+        type: string
+        required: false
+        default: './'
+
+jobs:
+  build:
+    runs-on:
+      ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ${{ inputs.JS_ACTIONS_WORKING_DIRECTORY }}
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v2
+
+    - name: Setup Node
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+
+    - name: Check for package.json
+      shell: bash
+      run: |
+        if [ -f "package.json" ]; then
+          echo "PACKAGE_JSON_EXISTS=true" >> $GITHUB_ENV
+        fi
+
+    - name: Setup env
+      if: env.PACKAGE_JSON_EXISTS == 'true'
+      shell: bash
+      run: |
+        echo "APP_NAME=$(node -e "console.log(require('./package.json').name);")" >> $GITHUB_ENV
+        echo "APP_VERSION=$(node -e "console.log(require('./package.json').version);")" >> $GITHUB_ENV
+      # echo "VERSION=$( jq -er  '.version' package.json )" >> $GITHUB_ENV
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Build
+      run: npm run build --if-present
+
+    - name: Run tests
+      run: npm test
+
+    - name: Run audit
+      run: npm audit --json > audit.json
+      continue-on-error: true
+
+    - name: Archive npm audit report
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ APP_NAME }}-${{ APP_VERSION }}-npm-audit-report
+        path: audit.json
+        retention-days: 5
+
+#    - name: Archive production artifacts
+#      uses: actions/upload-artifact@v3
+#      with:
+#        name: npm-build-artifacts
+#        path: |
+#          dist
+#          !dist/**/*.md
+#        retention-days: 5
+
+#
+#  build-diff-node-versions:
+#
+#    runs-on: ubuntu-latest
+#
+#    strategy:
+#      matrix:
+#        node-version: [ 12.x, 14.x, 16.x ]
+#        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+#
+#    steps:
+#      - uses: actions/checkout@v2
+#      - name: Use Node.js ${{ matrix.node-version }}
+#        uses: actions/setup-node@v2
+#        with:
+#          node-version: ${{ matrix.node-version }}
+#          cache: 'npm'
+#      - run: npm ci
+#      - run: npm run build --if-present
+#      - run: npm test
+#
+#
+#  build:
+#
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#      - uses: actions/checkout@v2
+#      - name: Use Node.js
+#        uses: actions/setup-node@v1
+#        with:
+#          always-auth: true
+#          node-version: '12.x'
+#          registry-url: https://registry.npmjs.org
+#          scope: '@octocat'
+#      - name: Install dependencies
+#        run: npm ci
+#        env:
+#          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
