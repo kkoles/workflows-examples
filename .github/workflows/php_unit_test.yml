@@ -1,0 +1,49 @@
+name: Sample PHP Unit test
+
+on:
+  workflow_call:
+    inputs:
+      PHP_VERSION:
+        type: string
+        required: false
+        default: 8.0
+      WORKING_DIRECTORY:
+        type: string
+        required: false
+        default: ./
+      TESTS_WORKING_DIRECTORY:
+        type: string
+        required: false
+        default: ./tests/
+
+jobs:
+  test:
+    name: PHPUnit Test
+    runs-on:
+      ubuntu-latest
+
+    steps:
+      ############# CHECKOUT #############
+      # https://github.com/actions/checkout
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      ############# SETUP #############
+      # https://github.com/marketplace/actions/setup-php-action
+      - name: Setup PHP
+        id: setup-php
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ inputs.PHP_VERSION }}
+
+      - name: Print PHP version
+        run: |
+          echo 'PHP Version: ${{ steps.setup-php.outputs.php-version }}'
+
+      - name: Build php project
+        working-directory: ${{ inputs.WORKING_DIRECTORY }}
+        run: composer install
+
+      - name: Run phpunit test
+        working-directory: ${{ inputs.WORKING_DIRECTORY }}
+        run: ./vendor/bin/phpunit --testdox ${{ inputs.TESTS_WORKING_DIRECTORY }}

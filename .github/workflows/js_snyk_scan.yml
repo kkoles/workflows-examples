@@ -1,0 +1,36 @@
+name: Snyk Scan Workflow
+
+on:
+  workflow_call:
+    inputs:
+      SNYK_ARGUMENTS:
+        required: false
+        type: string
+        default: --all-projects --detection-level=2
+    secrets:
+      SNYK_TOKEN:
+        required: true
+
+jobs:
+  scan:
+    name: Snyk Scan
+    runs-on: ubuntu-latest
+    steps:
+
+      ############# CHECKOUT #############
+      # https://github.com/actions/checkout
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      ############# SCAN #############
+      # Snyk
+      # https://github.com/marketplace/actions/snyk
+      - name: Run Snyk to check for vulnerabilities
+        id: scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        continue-on-error: true
+        with:
+          args: ${{ inputs.SNYK_ARGUMENTS }}
+          json: true

@@ -1,0 +1,39 @@
+name: Selenium Test Workflow
+
+on:
+  workflow_call:
+    inputs:
+      NODE_VERSION:
+        required: false
+        type: string
+        default: '16'
+
+jobs:
+  test:
+    name: Selenium Test
+    runs-on: ubuntu-latest
+    steps:
+
+      ############# CHECKOUT #############
+      # https://github.com/actions/checkout
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      ########## SETUP #############
+      # https://github.com/marketplace/actions/setup-node-js-environment
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ inputs.NODE_VERSION }}
+
+      ############# TEST #############
+      # https://github.com/marketplace/actions/start-selenoid-server
+      - name: Start Selenoid Server
+        uses: Xotabu4/selenoid-github-action@v2
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+        continue-on-error: true

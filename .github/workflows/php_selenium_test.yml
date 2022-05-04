@@ -1,0 +1,42 @@
+name: Selenium Test Workflow
+
+on:
+  workflow_call:
+    inputs:
+      PHP_VERSION:
+        type: string
+        required: false
+        default: '8.1'
+      NODE_VERSION:
+        type: string
+        required: false
+        default: 16
+
+jobs:
+  test:
+    name: Selenium Test
+    runs-on:
+      ubuntu-latest
+
+    steps:
+      ############# CHECKOUT #############
+      # https://github.com/actions/checkout
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      ############# SETUP #############
+      # https://github.com/marketplace/actions/setup-php-action
+      - name: Setup PHP
+        id: setup-php
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ inputs.PHP_VERSION }}
+
+      - name: Print PHP version
+        run: |
+          echo 'PHP Version: ${{ steps.setup-php.outputs.php-version }}'
+
+      ############# TEST #############
+      # https://github.com/marketplace/actions/start-selenoid-server
+      - name: Start Selenoid Server
+        uses: Xotabu4/selenoid-github-action@v2

@@ -1,0 +1,33 @@
+name: Jest Test Workflow
+
+on:
+  workflow_call:
+    inputs:
+      NODE_VERSION:
+        required: false
+        type: string
+        default: '16'
+
+jobs:
+  test:
+    name: Jest Test
+    runs-on: ubuntu-latest
+    steps:
+
+      ############# CHECKOUT #############
+      # https://github.com/actions/checkout
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      ########## SETUP #############
+      # https://github.com/marketplace/actions/setup-node-js-environment
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ inputs.NODE_VERSION }}
+
+      ############# TEST #############
+      # https://github.com/marketplace/actions/run-jest
+
+      - name: Run Jest Test
+        uses: stefanoeb/jest-action@1.0.3

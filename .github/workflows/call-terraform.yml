@@ -1,0 +1,36 @@
+name: Call Terraform Workflow
+
+on:
+  workflow_dispatch:
+
+#  push:
+#    branches-ignore:
+#      - main
+#  pull_request:
+#    branches-ignore:
+#      - main
+
+jobs:
+  terraform-1:
+    uses: ./.github/workflows/terraform.yml
+    with:
+      STAGE: test
+      REQUIRED_TERRAFORM_VERSION:  0.12.20
+      TERRAFORM_WORKING_DIRECTORY: ./environments/my-test-env-1
+      AWS_REGION: eu-central-1
+    secrets:
+      AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ROLE_TO_ASSUME:    ${{ secrets.AWS_ROLE_TO_ASSUME }}
+
+  terraform-2:
+    uses: ./.github/workflows/terraform.yml
+    with:
+      STAGE: test
+      REQUIRED_TERRAFORM_VERSION: 1.1.7
+      TERRAFORM_WORKING_DIRECTORY: ./environments/my-test-env-2
+      AWS_REGION: eu-central-1
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}

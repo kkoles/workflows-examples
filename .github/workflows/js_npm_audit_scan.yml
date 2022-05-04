@@ -1,0 +1,60 @@
+name: Selenium Test Workflow
+
+on:
+  workflow_call:
+    inputs:
+      NODE_VERSION:
+        required: false
+        type: string
+        default: '16'
+      WORKING_DIRECTORY:
+        required: false
+        type: string
+        default: ./
+    secrets:
+      GITHUB_TOKEN_FOR_ISSUE_CREATION:
+        required: true
+        description: "github token for the creation of an issue"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  scan:
+    name: NPM Audit Scan
+    runs-on: ubuntu-latest
+    steps:
+
+      ############# CHECKOUT #############
+      # https://github.com/actions/checkout
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      ########## SETUP #############
+      # https://github.com/marketplace/actions/setup-node-js-environment
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ inputs.NODE_VERSION }}
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      ############# SCAN #############
+      # https://github.com/marketplace/actions/npm-audit-action
+
+      - name: Run NPM audit to check for vulnerabilities
+        id: audit
+        uses: oke-py/npm-audit-action@v2
+        with:
+          audit_level: moderate
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          issue_labels: vulnerability,npm
+          dedupe_issues: true
+#          working_directory: ${{ inputs.WORKING_DIRECTORY }}
+        #        json_flag: true
+        continue-on-error: true
+
+      - name: NPM Audit result
+        run: echo '${{ steps.audit.outputs.npm_audit }}'

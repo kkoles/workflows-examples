@@ -1,0 +1,80 @@
+name: AWS SAM Workflow for PHP
+
+on:
+  workflow_call:
+    inputs:
+      PHP_VERSION:
+        type: string
+        required: false
+        default: 8.0
+      SAM_APP_WORKING_DIRECTORY:
+        type: string
+        required: true
+      BUILD_WORKING_DIRECTORY:
+        type: string
+        required: true
+      SAM_STACK_NAME:
+        type: string
+        required: true
+    secrets:
+      AWS_REGION:
+        required: true
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      SAM_AWS_S3_BUCKET:
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on:
+      ubuntu-latest
+
+    steps:
+      ############# CHECKOUT #############
+      # https://github.com/actions/checkout
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      ############# SETUP #############
+      # https://github.com/marketplace/actions/setup-php-action
+      - name: Setup PHP
+        id: setup-php
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ inputs.PHP_VERSION }}
+
+      - name: Print PHP version
+        run: |
+          echo 'PHP Version: ${{ steps.setup-php.outputs.php-version }}'
+
+      - name: Build php project
+        working-directory: ${{ inputs.BUILD_WORKING_DIRECTORY }}
+        run: composer install
+
+      # https://github.com/marketplace/actions/configure-aws-credentials-action-for-github-actions
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region: ${{ secrets.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-duration-seconds: 1200
+          role-skip-session-tagging: true
+
+      # https://github.com/marketplace/actions/setup-aws-sam-cli
+      - name: Setup AWS SAM
+        uses: aws-actions/setup-sam@v1
+
+      - name: SAM Deploy
+        working-directory: ${{ inputs.SAM_APP_WORKING_DIRECTORY }}
+        run: |
+          sam deploy \
+            --stack-name ${{ inputs.SAM_STACK_NAME }} \
+            --s3-bucket ${{ secrets.SAM_AWS_S3_BUCKET }} \
+            --region ${{ secrets.AWS_REGION }} \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --capabilities CAPABILITY_IAM

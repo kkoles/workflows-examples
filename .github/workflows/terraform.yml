@@ -1,0 +1,204 @@
+name: Terraform CI
+
+on:
+  workflow_call:
+    inputs:
+      STAGE:
+        required: true
+        type: string
+        default: test
+      REQUIRED_TERRAFORM_VERSION:
+        required: false
+        type: string
+      TERRAFORM_WORKING_DIRECTORY:
+        required: true
+        type: string
+      AWS_REGION:
+        required: true
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      AWS_ROLE_TO_ASSUME:
+        required: true
+
+jobs:
+  terraform-plan:
+    name: Terraform Plan - ${{ inputs.STAGE }} environment
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.STAGE }}
+
+    env:
+      STAGE: ${{ inputs.STAGE }}
+      REQUIRED_TERRAFORM_VERSION: ${{ inputs.REQUIRED_TERRAFORM_VERSION }}
+      TERRAFORM_WORKING_DIRECTORY: ${{ inputs.TERRAFORM_WORKING_DIRECTORY }}
+      AWS_REGION: ${{ inputs.AWS_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+      NODE_VERSION: 14
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-region:            ${{ env.AWS_REGION }}
+        aws-access-key-id:     ${{ env.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+        role-to-assume:        ${{ env.AWS_ROLE_TO_ASSUME }}
+        role-duration-seconds: 2000
+        role-skip-session-tagging: true
+
+    - name: Setup Node
+      uses: actions/setup-node@v2
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: ${{ env.REQUIRED_TERRAFORM_VERSION }}
+
+    - name: Terraform fmt
+      id: fmt
+      working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+      run: terraform fmt -check
+      continue-on-error: true
+
+    - name: Terraform Init
+      id: init
+      working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+      run: terraform init
+
+    - name: Terraform Validate
+      id: validate
+      working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+      run: terraform validate -no-color
+
+    - name: Terraform Plan
+      id: plan
+      working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+      run: terraform plan -no-color -out "../../plan"
+      continue-on-error: true
+
+    - name: Upload Terraform plan results
+      uses: actions/upload-artifact@v2
+      with:
+        name: terraform-plan
+        path: plan
+
+    - name: Upload Lambda Function archives
+      uses: actions/upload-artifact@v2
+      with:
+        name: lambda-functions-zip
+        path: lambda-functions/*.zip
+
+    - name: Update Pull Request
+      uses: actions/github-script@v3.1
+      if: github.event_name == 'pull_request'
+      env:
+        PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+      with:
+        script: |
+            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+            #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+            
+            <details><summary>Show Plan</summary>
+            
+            \`\`\`\n
+            ${process.env.PLAN}
+            \`\`\`
+            
+            </details>
+            
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+            
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+    - name: Terraform Plan Status
+      if: steps.plan.outcome == 'failure'
+      run: exit 1
+
+  terraform-apply:
+    name: Terraform Apply - ${{ inputs.STAGE }} environment
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.STAGE }}
+
+    env:
+      STAGE: ${{ inputs.STAGE }}
+      REQUIRED_TERRAFORM_VERSION: ${{ inputs.REQUIRED_TERRAFORM_VERSION }}
+      TERRAFORM_WORKING_DIRECTORY: ${{ inputs.TERRAFORM_WORKING_DIRECTORY }}
+      AWS_REGION: ${{ inputs.AWS_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+      NODE_VERSION: 14
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region:            ${{ env.AWS_REGION }}
+          aws-access-key-id:     ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume:        ${{ env.AWS_ROLE_TO_ASSUME }}
+          role-duration-seconds: 2000
+          role-skip-session-tagging: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download Plan Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: terraform-plan
+
+      - name: Download Lambda Function archives
+        uses: actions/download-artifact@v3
+        with:
+          name: lambda-functions-zip
+          path: lambda-functions/
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: ${{ env.REQUIRED_TERRAFORM_VERSION }}
+
+      - name: Terraform Init
+        id: init
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+        run: terraform init
+
+      - name: Terraform Apply
+        id: apply
+        if: github.event_name == 'push'
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+        run: terraform apply -input=false "plan"
+
+      - name: Terraform Apply Result
+        uses: actions/github-script@v3.1
+        if: github.event_name == 'push'
+        env:
+          APPLY: "terraform\n${{ steps.apply.outputs.stdout }}"
+        with:
+          script: |
+            const output = `#### Terraform Apply ✅ \`${{ steps.apply.outcome }}\`
+
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`*`;
