@@ -1,3 +1,13 @@
+import gzip
+from io import TextIOWrapper, BytesIO
+import requests
+from requests.auth import HTTPBasicAuth
+import json
+import boto3
+import botocore
+import datetime
+import sys
+
 number_of_days = int(sys.argv[1])
 logs_s3_bucket = str(sys.argv[2])
 output_file    = str(sys.argv[3])
