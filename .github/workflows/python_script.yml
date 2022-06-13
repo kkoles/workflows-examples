@@ -1,0 +1,48 @@
+name: Nexus Activity
+on:
+  workflow_dispatch:
+    inputs:
+      number_of_days:
+        description: 'The number of days for which log information should be retrieved, min value: 1, max value: 90'
+        required: true
+        default: 1
+jobs:
+  nexus-activity:
+    runs-on: external-k8s
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: $ {{secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_S3_LOGS_BUCKET: my-test-bucket
+      USER: ${{ secrets.USER }}
+      PASSWORD: ${{ secrets.PASSWORD }}
+      SCRIPT: "script.py"
+
+    defaults:
+      run:
+        working-directory: scripts
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Set up python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Getting audit log information
+        run: |
+          python ${{ env.SCRIPT }} \
+            ${{ github.event.inputs.number_of_days }} \
+            ${{ env.AWS_S3_LOGS_BUCKET }} \
+            activity.txt \
+            ${{ env.USER }}
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: activity
+          path: activity.txt
+          if-no-files-found: ignore
